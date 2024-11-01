@@ -1,8 +1,9 @@
 import cv2
 import math
+import matplotlib.pyplot as plt
 
 
-# -------- Nadeesha---------------
+# NOTE:######## Nadeesha ###############
 def resize_image(image):
     original_height, original_width = image.shape[:2]
     aspect_ratio = original_height / original_width
@@ -12,7 +13,7 @@ def resize_image(image):
     return r_image
 
 
-# --------- Yeshara---------------
+# NOTE:######## Yeshara ###############
 def grayScale_image(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     return gray
@@ -32,7 +33,7 @@ def blur_image(image):
     return blurred
 
 
-# ---------- Aadhya-------------------------------
+# NOTE:######## Aadhya ###############
 def preprocess_image(image):
     _, binary = cv2.threshold(image, 127, 255, cv2.THRESH_BINARY)
     # cv2.imshow("Binary Image",binary)
@@ -45,7 +46,7 @@ def detect_edges_image(image):
     return edges
 
 
-# ------------- Thenuja ----------------------
+# NOTE:######## Thenuja ###############
 def find_largest_contour(image):
     contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -85,6 +86,10 @@ def check_if_cropping_needed(image, color_image):
 def crop_image(image, color_image):
     # cv2.imshow("Image", image)
     large = find_largest_contour(image)
+    if large is None:
+        print("No contour detected")
+        return False
+
     x, y, w, h = cv2.boundingRect(large)
     crop = image[y : y + h, x : x + w]
     crop_color = color_image[y : y + h, x : x + w]
@@ -95,7 +100,7 @@ def crop_image(image, color_image):
     return res, res_color
 
 
-# --------------------- Chamindu ------------------------------------
+# NOTE:######## Chamindu ###############
 def detect_features(image):
     orb = cv2.ORB_create()
     keypoints, descriptors = orb.detectAndCompute(image, None)
@@ -119,20 +124,40 @@ def compare_images(image1, image2):
     return matches, keypoints1, keypoints2
 
 
-# ------------------ Nadeesha ----------------------------
+# NOTE:######## Nadeesha ###############
 def compare_histograms(image1, image2):
     gray1 = grayScale_image(image1)
     gray2 = grayScale_image(image2)
+    cv2.imshow("Ref", gray1)
+    cv2.imshow("Test", gray2)
     hist1 = cv2.calcHist([gray1], [0], None, [256], [0, 256])
     hist2 = cv2.calcHist([gray2], [0], None, [256], [0, 256])
+    # display_histograms(hist1, hist2)
     cv2.normalize(hist1, hist1)
     cv2.normalize(hist2, hist2)
     similarity = cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)
-    print(similarity)
+    print("Histo Similarity: ", similarity)
     return similarity
 
 
-# ---------------- Chamindu -----------------------------
+def display_histograms(hist1, hist2):
+    plt.figure(figsize=(10, 5))
+
+    plt.plot(hist1, color="blue", label="Image 1 Histogram")
+    plt.fill_between(range(256), hist1[:, 0], color="blue", alpha=0.3)
+
+    plt.plot(hist2, color="green", label="Image 2 Histogram")
+    plt.fill_between(range(256), hist2[:, 0], color="green", alpha=0.3)
+
+    plt.xlabel("Pixel Intensity")
+    plt.ylabel("Frequency")
+    plt.title("Grayscale Histogram Comparison")
+    plt.legend()
+
+    plt.show()
+
+
+# NOTE:######## Chamindu ###############
 def check_currency_validity(ref_image, test_image, threshold=0.55):
     ref_resized_img = resize_image(ref_image)
     ref_enhanced_img = enhance_image(ref_resized_img)
@@ -145,6 +170,7 @@ def check_currency_validity(ref_image, test_image, threshold=0.55):
     test_blur_img = blur_image(test_enhanced_img)
     test_pre_img = preprocess_image(test_enhanced_img)
     test_edges = detect_edges_image(test_pre_img)
+
     if check_if_cropping_needed(test_edges, test_resized_img):
         test_cropped, test_cropped_color = crop_image(test_edges, test_resized_img)
     else:
@@ -173,8 +199,10 @@ def check_currency_validity(ref_image, test_image, threshold=0.55):
 
     total_matches = len(matches) if matches else 0
     similarity = total_matches / min(len(kp1), len(kp2)) if total_matches > 0 else 0
+    print("Feature Similarity: ", similarity)
     total_similarity = math.sqrt(similarity**2 + histo_similarity**2)
-    print(total_similarity)
+
+    print("Total Similarity: ", total_similarity)
 
     if total_similarity >= threshold:
         return "Real Currency", matched_image
@@ -189,7 +217,10 @@ ref_image = cv2.imread(REF_IMAGE_PATH, cv2.IMREAD_COLOR)
 real_image = cv2.imread(TEST_IMAGE_PATH, cv2.IMREAD_COLOR)
 fake_image = cv2.imread(FAKE_IMAGE_PATH, cv2.IMREAD_COLOR)
 
+# Real Image
 result, matched_image = check_currency_validity(ref_image, real_image)
+# Fake Image
+# result, matched_image = check_currency_validity(ref_image, fake_image)
 
 print(result)
 if result == "Real Currency":
